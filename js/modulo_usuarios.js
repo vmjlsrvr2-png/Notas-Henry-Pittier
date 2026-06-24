@@ -145,15 +145,9 @@ async function cargarTablaUsuarios(page = 1) {
   if (rolFilter) body.rol_filter = rolFilter;
   if (activoFilter) body.activo_filter = activoFilter === "true";
 
-  const { data, error } = await supabase.functions.invoke(
-    "users-list_users",
-    {
-      body,
-      headers: { Authorization: `Bearer ${tokenGlobal}` }
-    }
-  );
+  const usuarios = await API.usuarios.listar({ ...body });
 
-  if (error) {
+  if (!usuarios) {
     document.getElementById("tablaUsuarios").innerHTML =
       `<div class="alert alert-danger">Error cargando usuarios</div>`;
     return;
@@ -237,15 +231,9 @@ function abrirModalCrear() {
 // Editar usuario
 // -------------------------------------------------------------
 async function editarUsuario(id) {
-  const { data, error } = await supabase.functions.invoke(
-    "users-get_user",
-    {
-      body: { user_id: id },
-      headers: { Authorization: `Bearer ${tokenGlobal}` }
-    }
-  );
+  const data = await API.usuarios.obtener(id);
 
-  if (error) return alert("Error cargando usuario");
+  if (!data) return alert("Error cargando usuario");
 
   document.getElementById("modalTitulo").textContent = "Editar Usuario";
 

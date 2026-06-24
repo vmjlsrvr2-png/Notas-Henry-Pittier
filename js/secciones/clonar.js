@@ -34,9 +34,10 @@ async function ejecutarClonado(event) {
   };
 
   try {
-    const data = await API.secciones.clonarAOtroAnio(
+    const data = await API.secciones.clonar(
       body.id_seccion_origen,
-      body.anio_destino || null
+      body.nombre_nuevo,
+      body.letra_nueva
     );
 
     if (data?.error) {

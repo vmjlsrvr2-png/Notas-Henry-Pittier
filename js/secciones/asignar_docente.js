@@ -10,26 +10,8 @@ async function abrirAsignarDocente(idSeccion, idMateria) {
   document.getElementById("asignarInfoMateria").innerText =
     materia ? `Materia: ${materia.nombre_materia}` : "Materia seleccionada";
 
-  const { data: rawDocentes, error: docentesError } = await supabase.functions.invoke(
-    "users-list_users",
-    {
-      body: {
-        page: 1,
-        per_page: 200,
-        rol_filter: "docente",
-        activo_filter: true
-      },
-      headers: { Authorization: `Bearer ${session.access_token}` }
-    }
-  );
-
-  if (docentesError) {
-    alert("Error cargando docentes");
-    return;
-  }
-
-  const response = JSON.parse(rawDocentes);
-  const docentes = response.items || [];
+  const docentesData = await API.usuarios.listar({ page: 1, per_page: 200, rol_filter: "docente", activo_filter: true });
+  const docentes = Array.isArray(docentesData) ? docentesData : docentesData?.items || [];
 
   const select = document.getElementById("asignarDocenteSelect");
   select.innerHTML = "";

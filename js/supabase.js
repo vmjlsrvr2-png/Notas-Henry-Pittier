@@ -27,11 +27,11 @@ const LEGACY_FUNCTIONS = {
   'secciones-listar': 'modulo-secciones',
   'secciones-crear': 'modulo-secciones',
   'secciones-editar': 'modulo-secciones',
-  'secciones-asignar-docente': 'modulo-secciones',
-  'secciones-cambiar-docente': 'modulo-secciones',
-  'secciones-listar-materias': 'modulo-secciones',
-  'secciones-agregar-materia': 'modulo-secciones',
-  'secciones-quitar-materia': 'modulo-secciones',
+  'secciones-asignar-docente': 'modulo-materias',
+  'secciones-cambiar-docente': 'modulo-materias',
+  'secciones-listar-materias': 'modulo-materias',
+  'secciones-agregar-materia': 'modulo-materias',
+  'secciones-quitar-materia': 'modulo-materias',
   'secciones-clonar-otro-anio': 'modulo-secciones',
   'secciones-toggle': 'modulo-secciones',
 
@@ -206,7 +206,7 @@ const mapLegacyCall = (functionName, body) => {
   }
 
   if (functionName === 'periodos-list_anios') {
-    return { functionName: 'modulo-periodos', body: { action: 'listar', data: {} } };
+    return { functionName: 'modulo-periodos', body: { action: 'listar', params: {} } };
   }
 
   if (functionName === 'periodos-create_anio') {
@@ -293,9 +293,11 @@ const mapLegacyCall = (functionName, body) => {
     return {
       functionName: 'modulo-secciones',
       body: {
-        action: 'listar-secciones',
-        anio_escolar_id: data.anio_escolar_id || data.anioId || data.id_anio || data.anio_id || null,
-        activo: data.activo ?? data.active ?? undefined,
+        action: 'listar',
+        data: {
+          anio_escolar_id: data.anio_escolar_id || data.anioId || data.id_anio || data.anio_id || null,
+          activo: data.activo ?? data.active ?? undefined,
+        },
       },
     };
   }
@@ -305,11 +307,13 @@ const mapLegacyCall = (functionName, body) => {
     return {
       functionName: 'modulo-secciones',
       body: {
-        action: 'crear-seccion',
-        nombre: data.nombre || '',
-        grado: data.grado ?? Number(data.grado_id || 0),
-        letra: data.letra || '',
-        anio_escolar_id: data.anio_escolar_id || data.anioId || data.id_anio || data.anio_id || null,
+        action: 'crear',
+        data: {
+          nombre: data.nombre || '',
+          grado: data.grado ?? Number(data.grado_id || 0),
+          letra: data.letra || '',
+          anio_escolar_id: data.anio_escolar_id || data.anioId || data.id_anio || data.anio_id || null,
+        },
       },
     };
   }
@@ -319,12 +323,14 @@ const mapLegacyCall = (functionName, body) => {
     return {
       functionName: 'modulo-secciones',
       body: {
-        action: 'editar-seccion',
-        id_seccion: data.id_seccion || data.seccion_id || data.id || null,
-        nombre: data.nombre || '',
-        grado: data.grado ?? Number(data.grado_id || 0),
-        letra: data.letra || '',
-        anio_escolar_id: data.anio_escolar_id || data.anioId || data.id_anio || data.anio_id || null,
+        action: 'editar',
+        data: {
+          id_seccion: data.id_seccion || data.seccion_id || data.id || null,
+          nombre: data.nombre || '',
+          grado: data.grado ?? Number(data.grado_id || 0),
+          letra: data.letra || '',
+          anio_escolar_id: data.anio_escolar_id || data.anioId || data.id_anio || data.anio_id || null,
+        },
       },
     };
   }
@@ -332,9 +338,9 @@ const mapLegacyCall = (functionName, body) => {
   if (functionName === 'secciones-asignar-docente' || functionName === 'secciones-cambiar-docente') {
     const data = payload || {};
     return {
-      functionName: 'modulo-secciones',
+      functionName: 'modulo-materias',
       body: {
-        action: 'asignar-docente',
+        action: functionName === 'secciones-cambiar-docente' ? 'cambiar-docente' : 'asignar-docente',
         p_id_seccion: data.id_seccion || data.seccion_id || data.seccionId || null,
         p_id_materia: data.id_materia || data.materia_id || data.materiaId || null,
         p_id_docente: data.id_docente || data.docente_id || data.docenteId || data.nuevo_docente_id || data.nuevoDocenteId || null,
@@ -345,7 +351,7 @@ const mapLegacyCall = (functionName, body) => {
   if (functionName === 'secciones-listar-materias') {
     const data = payload || {};
     return {
-      functionName: 'modulo-secciones',
+      functionName: 'modulo-materias',
       body: {
         action: 'listar-materias-seccion',
         p_id_seccion: data.id_seccion || data.seccion_id || data.seccionId || null,
@@ -356,9 +362,9 @@ const mapLegacyCall = (functionName, body) => {
   if (functionName === 'secciones-agregar-materia') {
     const data = payload || {};
     return {
-      functionName: 'modulo-secciones',
+      functionName: 'modulo-materias',
       body: {
-        action: 'asignar-materia',
+        action: 'agregar-materia-seccion',
         p_id_seccion: data.id_seccion || data.seccion_id || data.seccionId || null,
         p_id_materia: data.id_materia || data.materia_id || data.materiaId || null,
       },
@@ -368,9 +374,9 @@ const mapLegacyCall = (functionName, body) => {
   if (functionName === 'secciones-quitar-materia') {
     const data = payload || {};
     return {
-      functionName: 'modulo-secciones',
+      functionName: 'modulo-materias',
       body: {
-        action: 'asignar-materia',
+        action: 'quitar-materia-seccion',
         p_id_seccion: data.id_seccion || data.seccion_id || data.seccionId || null,
         p_id_materia: data.id_materia || data.materia_id || data.materiaId || null,
       },
@@ -382,9 +388,12 @@ const mapLegacyCall = (functionName, body) => {
     return {
       functionName: 'modulo-secciones',
       body: {
-        action: 'clonar-seccion-otro-anio',
-        id_seccion: data.id_seccion || data.seccion_id || data.seccionId || null,
-        anio_destino: data.anio_destino || data.anioDestino || data.anio_destino_id || null,
+        action: 'clonar',
+        data: {
+          p_id_seccion_origen: data.id_seccion || data.seccion_id || data.seccionId || null,
+          p_nombre_nuevo: data.nombre_nuevo || data.nombreNuevo || '',
+          p_letra_nueva: data.letra_nueva || data.letraNueva || '',
+        },
       },
     };
   }
@@ -394,8 +403,10 @@ const mapLegacyCall = (functionName, body) => {
     return {
       functionName: 'modulo-secciones',
       body: {
-        action: 'toggle-seccion',
-        id_seccion: data.id_seccion || data.seccion_id || data.id || null,
+        action: 'toggle_status',
+        data: {
+          id_seccion: data.id_seccion || data.seccion_id || data.id || null,
+        },
       },
     };
   }
@@ -434,6 +445,33 @@ const mapLegacyCall = (functionName, body) => {
   if (functionName === 'modulo-notas' || functionName === 'modulo-evaluaciones') {
     const data = payload || {};
     if (data && typeof data === 'object' && data.action) {
+      if (data.action === 'crear-evaluacion') {
+        const evaluations = Array.isArray(data.data?.evaluaciones)
+          ? data.data.evaluaciones.map(({ action: _action, ...item }) => item)
+          : (() => {
+              const { action: _action, ...evaluation } = data;
+              return [evaluation];
+            })();
+
+        const topLevel = {
+          docente_id: data.docente_id ?? data.data?.docente_id,
+          seccion_id: data.seccion_id ?? data.data?.seccion_id,
+          materia_id: data.materia_id ?? data.data?.materia_id,
+          lapso_id: data.lapso_id ?? data.data?.lapso_id,
+        };
+
+        return {
+          functionName: 'modulo-notas',
+          body: {
+            action: 'configurar-planilla',
+            data: {
+              ...topLevel,
+              evaluaciones,
+            },
+          },
+        };
+      }
+
       const targetFunction = ['configurar-planilla', 'registrar-planilla', 'corregir-individual', 'obtener-planilla-llenada', 'verificar-completitud-notas'].includes(data.action)
         ? 'modulo-notas'
         : 'modulo-evaluaciones';

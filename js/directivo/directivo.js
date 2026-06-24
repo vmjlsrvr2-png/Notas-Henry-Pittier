@@ -14,21 +14,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   window.tokenGlobal = token;
 
-  const { data: rawUserData, error } = await supabase.functions.invoke(
-    "users-get_user",
-    {
-      body: { user_id: userId },
-      headers: { Authorization: `Bearer ${token}` }
-    }
-  );
+  const userData = await API.usuarios.obtener(userId);
 
-  if (error || !rawUserData) {
+  if (!userData) {
     alert("Error verificando rol");
     window.location.href = "login.html";
     return;
   }
-
-  const userData = JSON.parse(rawUserData);
 
   if (userData.rol !== "directivo" && userData.rol !== "superadmin") {
     alert("Acceso denegado");
@@ -102,29 +94,13 @@ document.getElementById("logoutBtn").addEventListener("click", async () => {
 // Dashboard (usa Edge Functions existentes)
 // -------------------------------------------------------------
 async function cargarDashboard(token) {
-  const { data: rawUsuarios } = await supabase.functions.invoke(
-    "users-list_users",
-    {
-      body: { page: 1, per_page: 1, activo_filter: true },
-      headers: { Authorization: `Bearer ${token}` }
-    }
-  );
-
-  const usuarios = JSON.parse(rawUsuarios);
+  const usuarios = await API.usuarios.listar({ page: 1, per_page: 1, activo_filter: true });
   document.getElementById("countUsuarios").textContent =
-    usuarios.pagination.total;
+    usuarios.pagination?.total ?? usuarios.length;
 
-  const { data: rawDocentes } = await supabase.functions.invoke(
-    "users-list_users",
-    {
-      body: { page: 1, per_page: 1, rol_filter: "docente" },
-      headers: { Authorization: `Bearer ${token}` }
-    }
-  );
-
-  const docentes = JSON.parse(rawDocentes);
+  const docentes = await API.usuarios.listar({ page: 1, per_page: 1, rol_filter: "docente" });
   document.getElementById("countDocentes").textContent =
-    docentes.pagination.total;
+    docentes.pagination?.total ?? docentes.length;
 
   document.getElementById("countEstudiantes").textContent = "—";
 }

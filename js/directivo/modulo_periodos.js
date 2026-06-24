@@ -1,22 +1,15 @@
 (async () => {
   const token = window.tokenGlobal;
 
-  const { data: rawResult, error: errorResult } = await supabase.functions.invoke(
-    "periodos-list_anios",
-    {
-      body: {},
-      headers: { Authorization: `Bearer ${token}` }
-    }
-  );
+  const periodos = await API.periodos.listarAnios();
 
-  if (errorResult) {
+  if (!periodos) {
     document.getElementById("periodosTabla").innerHTML =
       `<div class="alert alert-danger">Error cargando períodos académicos</div>`;
     return;
   }
 
-  const parsed = JSON.parse(rawResult);
-  const periodos = parsed?.data || [];
+  const periodos = periodos || []; 
 
   const contenedor = document.getElementById("periodosTabla");
 

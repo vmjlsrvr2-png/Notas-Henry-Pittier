@@ -1,15 +1,6 @@
 (async () => {
-  const token = window.tokenGlobal;
-
-  const { data: rawUsuarios } = await supabase.functions.invoke(
-    "users-list_users",
-    {
-      body: { page: 1, per_page: 50 },
-      headers: { Authorization: `Bearer ${token}` }
-    }
-  );
-
-  const usuarios = JSON.parse(rawUsuarios);
+  const usuariosData = await API.usuarios.listar({ page: 1, per_page: 50 });
+  const usuarios = Array.isArray(usuariosData) ? usuariosData : usuariosData?.items || [];
 
   const contenedor = document.getElementById("usuariosTabla");
 
@@ -28,7 +19,7 @@
       </tr>
     </thead>
     <tbody>
-      ${usuarios.items
+      ${usuarios
         .map(
           (u) => `
         <tr>

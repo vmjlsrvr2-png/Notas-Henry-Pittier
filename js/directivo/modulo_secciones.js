@@ -1,20 +1,5 @@
 (async () => {
-  const token = window.tokenGlobal;
-
-  const { data: rawActivo, error: errorActivo } = await supabase.functions.invoke(
-    "periodos-get_activo",
-    {
-      headers: { Authorization: `Bearer ${token}` }
-    }
-  );
-
-  if (errorActivo) {
-    document.getElementById("seccionesTabla").innerHTML =
-      `<div class="alert alert-danger">Error cargando secciones</div>`;
-    return;
-  }
-
-  const activoData = JSON.parse(rawActivo);
+  const activoData = await API.periodos.obtenerActivo();
   const idAnio = activoData?.anio?.id_anio;
 
   if (!idAnio) {
@@ -23,13 +8,8 @@
     return;
   }
 
-  const res = await fetch(`/functions/v1/secciones-listar?anio_escolar_id=${encodeURIComponent(
-    idAnio
-  )}`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-
-  const secciones = await res.json();
+  const seccionesData = await API.secciones.listar({ anio_escolar_id: idAnio });
+  const secciones = Array.isArray(seccionesData) ? seccionesData : seccionesData?.items || [];
 
   const contenedor = document.getElementById("seccionesTabla");
 
@@ -47,7 +27,7 @@
       </tr>
     </thead>
     <tbody>
-      ${secciones.items
+      ${secciones
         .map(
           (s) => `
         <tr>

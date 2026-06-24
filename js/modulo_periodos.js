@@ -107,23 +107,18 @@ async function cargarModuloPeriodos(token) {
 // Listar años escolares
 // -------------------------------------------------------------
 async function cargarAnios() {
-  const { data, error } = await supabase.functions.invoke(
-    "periodos-list_anios",
-    {
-      body: {},
-      headers: { Authorization: `Bearer ${tokenPeriodos}` }
-    }
-  );
+  const periodos = await API.periodos.listarAnios();
 
-  if (error) {
+  if (!periodos) {
     document.getElementById("listaAnios").innerHTML =
       `<div class="alert alert-danger">Error cargando años escolares</div>`;
     return;
   }
 
+  const anios = Array.isArray(periodos) ? periodos : periodos?.data || periodos?.items || [];
   let html = `<div class="list-group">`;
 
-  data.data.forEach(anio => {
+  anios.forEach(anio => {
     html += `
       <div class="list-group-item">
         <div class="d-flex justify-content-between">
@@ -164,14 +159,7 @@ async function crearAnio() {
   const inicio = document.getElementById("anioInicio").value;
   const fin = document.getElementById("anioFin").value;
 
-  await supabase.functions.invoke("periodos-create_anio", {
-    body: {
-      nombre,
-      fecha_inicio: inicio,
-      fecha_fin: fin
-    },
-    headers: { Authorization: `Bearer ${tokenPeriodos}` }
-  });
+  await API.periodos.crearAnio(nombre, inicio, fin);
 
   bootstrap.Modal.getInstance(document.getElementById("modalCrearAnio")).hide();
   cargarAnios();
@@ -181,10 +169,7 @@ async function crearAnio() {
 // Cerrar año escolar
 // -------------------------------------------------------------
 async function cerrarAnio(id) {
-  await supabase.functions.invoke("periodos-close_anio", {
-    body: { id_anio: id },
-    headers: { Authorization: `Bearer ${tokenPeriodos}` }
-  });
+  await API.periodos.cerrarAnio(id);
 
   cargarAnios();
 }
@@ -193,15 +178,10 @@ async function cerrarAnio(id) {
 // Ver lapsos de un año
 // -------------------------------------------------------------
 async function verLapsos(id_anio) {
-  const { data, error } = await supabase.functions.invoke(
-    "periodos-list_lapsos",
-    {
-      body: { id_anio },
-      headers: { Authorization: `Bearer ${tokenPeriodos}` }
-    }
-  );
+  const lapsosResponse = await API.periodos.listarLapsos(id_anio);
+  const lapsos = Array.isArray(lapsosResponse) ? lapsosResponse : lapsosResponse?.data || lapsosResponse?.items || lapsosResponse || [];
 
-  if (error) return alert("Error cargando lapsos");
+  if (!Array.isArray(lapsos)) return alert("Error cargando lapsos");
 
   let html = `
     <h4 class="mt-4">Lapsos</h4>
@@ -209,7 +189,7 @@ async function verLapsos(id_anio) {
     <div class="list-group">
   `;
 
-  data.data.forEach(lapso => {
+  lapsos.forEach(lapso => {
     html += `
       <div class="list-group-item">
         <div class="d-flex justify-content-between">
@@ -252,15 +232,7 @@ async function crearLapso() {
   const inicio = document.getElementById("lapsoInicio").value;
   const fin = document.getElementById("lapsoFin").value;
 
-  await supabase.functions.invoke("periodos-create_lapso", {
-    body: {
-      id_anio,
-      nombre,
-      fecha_inicio: inicio,
-      fecha_fin: fin
-    },
-    headers: { Authorization: `Bearer ${tokenPeriodos}` }
-  });
+  await API.periodos.crearLapso(id_anio, nombre, inicio, fin);
 
   bootstrap.Modal.getInstance(document.getElementById("modalCrearLapso")).hide();
   cargarAnios();
@@ -270,10 +242,7 @@ async function crearLapso() {
 // Activar lapso
 // -------------------------------------------------------------
 async function activarLapso(id_lapso) {
-  await supabase.functions.invoke("periodos-activate_lapso", {
-    body: { id_lapso },
-    headers: { Authorization: `Bearer ${tokenPeriodos}` }
-  });
+  await API.periodos.activarLapso(id_lapso);
 
   cargarAnios();
 }
@@ -282,10 +251,7 @@ async function activarLapso(id_lapso) {
 // Cerrar lapso
 // -------------------------------------------------------------
 async function cerrarLapso(id_lapso) {
-  await supabase.functions.invoke("periodos-close_lapso", {
-    body: { id_lapso },
-    headers: { Authorization: `Bearer ${tokenPeriodos}` }
-  });
+  await API.periodos.cerrarLapso(id_lapso);
 
   cargarAnios();
 }

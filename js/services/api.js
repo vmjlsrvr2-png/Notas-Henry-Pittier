@@ -48,22 +48,26 @@ const normalizeUser = (user = {}) => {
 const usuariosAPI = {
   /**
    * Crear nuevo usuario
-   * POST /functions/v1/users-create_user
+   * POST /functions/v1/modulo-usuarios
    */
   crear: async (email, password, metadata = {}) => {
     const { data, error } = await supabase.functions.invoke(
-      'users-create_user',
+      'modulo-usuarios',
       {
         method: 'POST',
         body: {
-          email,
-          password,
-          rol: metadata.rol || 'docente',
-          nombre: metadata.nombre || '',
-          apellido: metadata.apellido || '',
-          cedula: metadata.cedula || '',
-          especialidad: metadata.especialidad || null,
-          cargo: metadata.cargo || null,
+          action: 'create_user',
+          data: {
+            email,
+            password,
+            id_rol: metadata.id_rol || metadata.rol || 'docente',
+            username: metadata.username || metadata.email?.split('@')[0] || email.split('@')[0],
+            nombres: metadata.nombre || metadata.nombres || '',
+            apellidos: metadata.apellido || metadata.apellidos || '',
+            cedula: metadata.cedula || metadata.ci || '',
+            especialidad: metadata.especialidad || null,
+            cargo: metadata.cargo || null,
+          },
         },
       }
     );
@@ -73,21 +77,24 @@ const usuariosAPI = {
 
   /**
    * Listar usuarios
-   * GET /functions/v1/users-list_users
+   * POST /functions/v1/modulo-usuarios
    */
   listar: async (filters = {}) => {
     const { data, error } = await supabase.functions.invoke(
-      'users-list_users',
+      'modulo-usuarios',
       {
-        method: 'GET',
-        body: filters,
+        method: 'POST',
+        body: {
+          action: 'list_users',
+          data: filters,
+        },
       }
     );
     if (error) throw error;
 
     if (Array.isArray(data)) return data.map(normalizeUser);
     if (data && typeof data === 'object') {
-      const payload = data.data || data.registros || data.users || [];
+      const payload = data.data || data.registros || data.users || data.items || [];
       if (Array.isArray(payload)) return payload.map(normalizeUser);
       return [normalizeUser(data)];
     }
@@ -97,36 +104,34 @@ const usuariosAPI = {
 
   /**
    * Obtener usuario por ID
-   * GET /functions/v1/users-get_user
    */
   obtener: async (userId) => {
-    const { data, error } = await supabase.functions.invoke(
-      'users-get_user',
-      {
-        method: 'GET',
-        body: { user_id: userId },
-      }
-    );
+    const { data, error } = await supabase
+      .from('perfiles')
+      .select('*, user_roles(id_rol)')
+      .eq('id', userId)
+      .single();
+
     if (error) throw error;
-
-    if (data && typeof data === 'object') {
-      const payload = data.data || data.user || data.result || data;
-      return normalizeUser(payload);
-    }
-
-    return null;
+    return normalizeUser(data);
   },
 
   /**
    * Actualizar usuario
-   * POST /functions/v1/users-update_user
+   * POST /functions/v1/modulo-usuarios
    */
   actualizar: async (userId, updates) => {
     const { data, error } = await supabase.functions.invoke(
-      'users-update_user',
+      'modulo-usuarios',
       {
         method: 'POST',
-        body: { user_id: userId, ...updates },
+        body: {
+          action: 'update_user',
+          data: {
+            target_user_id: userId,
+            ...updates,
+          },
+        },
       }
     );
     if (error) throw error;
@@ -135,14 +140,20 @@ const usuariosAPI = {
 
   /**
    * Habilitar usuario
-   * POST /functions/v1/users-enable_user
+   * POST /functions/v1/modulo-usuarios
    */
   habilitar: async (userId) => {
     const { data, error } = await supabase.functions.invoke(
-      'users-enable_user',
+      'modulo-usuarios',
       {
         method: 'POST',
-        body: { user_id: userId },
+        body: {
+          action: 'toggle_status',
+          data: {
+            target_user_id: userId,
+            status: 'enable',
+          },
+        },
       }
     );
     if (error) throw error;
@@ -151,14 +162,20 @@ const usuariosAPI = {
 
   /**
    * Deshabilitar usuario
-   * POST /functions/v1/users-disable_user
+   * POST /functions/v1/modulo-usuarios
    */
   deshabilitar: async (userId) => {
     const { data, error } = await supabase.functions.invoke(
-      'users-disable_user',
+      'modulo-usuarios',
       {
         method: 'POST',
-        body: { user_id: userId },
+        body: {
+          action: 'toggle_status',
+          data: {
+            target_user_id: userId,
+            status: 'disable',
+          },
+        },
       }
     );
     if (error) throw error;
@@ -167,14 +184,20 @@ const usuariosAPI = {
 
   /**
    * Cambiar email
-   * POST /functions/v1/users-change_email
+   * POST /functions/v1/modulo-usuarios
    */
   cambiarEmail: async (userId, nuevoEmail) => {
     const { data, error } = await supabase.functions.invoke(
-      'users-change_email',
+      'modulo-usuarios',
       {
         method: 'POST',
-        body: { user_id: userId, new_email: nuevoEmail },
+        body: {
+          action: 'update_user',
+          data: {
+            target_user_id: userId,
+            email: nuevoEmail,
+          },
+        },
       }
     );
     if (error) throw error;
@@ -183,14 +206,20 @@ const usuariosAPI = {
 
   /**
    * Resetear contraseña
-   * POST /functions/v1/users-reset_password
+   * POST /functions/v1/modulo-usuarios
    */
-  resetearPassword: async (email) => {
+  resetearPassword: async (userId, newPassword) => {
     const { data, error } = await supabase.functions.invoke(
-      'users-reset_password',
+      'modulo-usuarios',
       {
         method: 'POST',
-        body: { email },
+        body: {
+          action: 'reset_password',
+          data: {
+            target_user_id: userId,
+            new_password: newPassword,
+          },
+        },
       }
     );
     if (error) throw error;
@@ -208,7 +237,7 @@ const usuariosAPI = {
         method: 'POST',
         body: {
           action: 'consultar-auditoria',
-          ...filters,
+          data: filters,
         },
       }
     );
@@ -224,30 +253,33 @@ const usuariosAPI = {
 const periodosAPI = {
   /**
    * Listar años escolares
-   * GET /functions/v1/periodos-list_anios
    */
   listarAnios: async () => {
-    const { data, error } = await supabase.functions.invoke(
-      'periodos-list_anios',
-      { method: 'GET' }
-    );
+    const { data, error } = await supabase
+      .from('anios_escolares')
+      .select('*')
+      .order('id_anio', { ascending: false });
+
     if (error) throw error;
     return data;
   },
 
   /**
    * Crear año escolar
-   * POST /functions/v1/periodos-create_anio
+   * POST /functions/v1/modulo-periodos
    */
   crearAnio: async (nombre, fechaInicio, fechaFin) => {
     const { data, error } = await supabase.functions.invoke(
-      'periodos-create_anio',
+      'modulo-periodos',
       {
         method: 'POST',
         body: {
-          nombre,
-          fecha_inicio: fechaInicio,
-          fecha_fin: fechaFin,
+          action: 'crear_anio',
+          params: {
+            nombre,
+            fecha_inicio: fechaInicio,
+            fecha_fin: fechaFin,
+          },
         },
       }
     );
@@ -257,14 +289,17 @@ const periodosAPI = {
 
   /**
    * Listar lapsos de un año
-   * GET /functions/v1/periodos-list_lapsos
+   * POST /functions/v1/modulo-periodos
    */
   listarLapsos: async (anioId) => {
     const { data, error } = await supabase.functions.invoke(
-      'periodos-list_lapsos',
+      'modulo-periodos',
       {
-        method: 'GET',
-        body: { anio_id: anioId },
+        method: 'POST',
+        body: {
+          action: 'listar_lapsos',
+          params: { id_anio: anioId },
+        },
       }
     );
     if (error) throw error;
@@ -273,18 +308,21 @@ const periodosAPI = {
 
   /**
    * Crear lapso
-   * POST /functions/v1/periodos-create_lapso
+   * POST /functions/v1/modulo-periodos
    */
   crearLapso: async (anioId, numero, fechaInicio, fechaFin) => {
     const { data, error } = await supabase.functions.invoke(
-      'periodos-create_lapso',
+      'modulo-periodos',
       {
         method: 'POST',
         body: {
-          anio_id: anioId,
-          numero,
-          fecha_inicio: fechaInicio,
-          fecha_fin: fechaFin,
+          action: 'crear_lapso',
+          params: {
+            id_anio: anioId,
+            nombre: numero,
+            fecha_inicio: fechaInicio,
+            fecha_fin: fechaFin,
+          },
         },
       }
     );
@@ -294,14 +332,17 @@ const periodosAPI = {
 
   /**
    * Activar lapso
-   * POST /functions/v1/periodos-activate_lapso
+   * POST /functions/v1/modulo-periodos
    */
   activarLapso: async (lapsoId) => {
     const { data, error } = await supabase.functions.invoke(
-      'periodos-activate_lapso',
+      'modulo-periodos',
       {
         method: 'POST',
-        body: { lapso_id: lapsoId },
+        body: {
+          action: 'activar_lapso',
+          params: { id_lapso: lapsoId },
+        },
       }
     );
     if (error) throw error;
@@ -310,14 +351,17 @@ const periodosAPI = {
 
   /**
    * Cerrar lapso
-   * POST /functions/v1/periodos-close_lapso
+   * POST /functions/v1/modulo-periodos
    */
   cerrarLapso: async (lapsoId) => {
     const { data, error } = await supabase.functions.invoke(
-      'periodos-close_lapso',
+      'modulo-periodos',
       {
         method: 'POST',
-        body: { lapso_id: lapsoId },
+        body: {
+          action: 'cerrar_lapso',
+          params: { id_lapso: lapsoId },
+        },
       }
     );
     if (error) throw error;
@@ -326,14 +370,17 @@ const periodosAPI = {
 
   /**
    * Cerrar año escolar
-   * POST /functions/v1/periodos-close_anio
+   * POST /functions/v1/modulo-periodos
    */
   cerrarAnio: async (anioId) => {
     const { data, error } = await supabase.functions.invoke(
-      'periodos-close_anio',
+      'modulo-periodos',
       {
         method: 'POST',
-        body: { anio_id: anioId },
+        body: {
+          action: 'cerrar_anio',
+          params: { id_anio: anioId },
+        },
       }
     );
     if (error) throw error;
@@ -342,12 +389,15 @@ const periodosAPI = {
 
   /**
    * Obtener período académico activo
-   * GET /functions/v1/periodos-get_activo
+   * POST /functions/v1/modulo-periodos
    */
   obtenerActivo: async () => {
     const { data, error } = await supabase.functions.invoke(
-      'periodos-get_activo',
-      { method: 'GET' }
+      'modulo-periodos',
+      {
+        method: 'POST',
+        body: { action: 'obtener_activo', params: {} },
+      }
     );
     if (error) throw error;
     return data;
@@ -361,7 +411,7 @@ const periodosAPI = {
 const seccionesAPI = {
   /**
    * Listar secciones
-   * GET /functions/v1/secciones-listar
+   * POST /functions/v1/modulo-secciones
    */
   listar: async (filters = {}) => {
     const { data, error } = await supabase.functions.invoke(
@@ -369,8 +419,8 @@ const seccionesAPI = {
       {
         method: 'POST',
         body: {
-          action: 'listar-secciones',
-          ...filters,
+          action: 'listar',
+          data: filters,
         },
       }
     );
@@ -380,7 +430,7 @@ const seccionesAPI = {
 
   /**
    * Crear sección
-   * POST /functions/v1/secciones-crear
+   * POST /functions/v1/modulo-secciones
    */
   crear: async (seccionData) => {
     const { data, error } = await supabase.functions.invoke(
@@ -388,8 +438,8 @@ const seccionesAPI = {
       {
         method: 'POST',
         body: {
-          action: 'crear-seccion',
-          ...seccionData,
+          action: 'crear',
+          data: seccionData,
         },
       }
     );
@@ -399,7 +449,7 @@ const seccionesAPI = {
 
   /**
    * Editar sección
-   * POST /functions/v1/secciones-editar
+   * POST /functions/v1/modulo-secciones
    */
   editar: async (seccionId, updates) => {
     const { data, error } = await supabase.functions.invoke(
@@ -407,9 +457,11 @@ const seccionesAPI = {
       {
         method: 'POST',
         body: {
-          action: 'editar-seccion',
-          id_seccion: seccionId,
-          ...updates,
+          action: 'editar',
+          data: {
+            id_seccion: seccionId,
+            ...updates,
+          },
         },
       }
     );
@@ -419,11 +471,11 @@ const seccionesAPI = {
 
   /**
    * Asignar docente a materia en sección
-   * POST /functions/v1/secciones-asignar-docente
+   * POST /functions/v1/modulo-materias
    */
   asignarDocente: async (seccionId, materiaId, docenteId) => {
     const { data, error } = await supabase.functions.invoke(
-      'modulo-secciones',
+      'modulo-materias',
       {
         method: 'POST',
         body: {
@@ -440,17 +492,18 @@ const seccionesAPI = {
 
   /**
    * Cambiar docente de una materia
-   * POST /functions/v1/secciones-cambiar-docente
+   * POST /functions/v1/modulo-materias
    */
   cambiarDocente: async (seccionId, materiaId, nuevoDocenteId) => {
     const { data, error } = await supabase.functions.invoke(
-      'secciones-cambiar-docente',
+      'modulo-materias',
       {
         method: 'POST',
         body: {
-          seccion_id: seccionId,
-          materia_id: materiaId,
-          nuevo_docente_id: nuevoDocenteId,
+          action: 'cambiar-docente',
+          p_id_seccion: seccionId,
+          p_id_materia: materiaId,
+          p_id_docente: nuevoDocenteId,
         },
       }
     );
@@ -460,11 +513,11 @@ const seccionesAPI = {
 
   /**
    * Listar materias de una sección
-   * GET /functions/v1/secciones-listar-materias
+   * POST /functions/v1/modulo-materias
    */
   listarMaterias: async (seccionId) => {
     const { data, error } = await supabase.functions.invoke(
-      'modulo-secciones',
+      'modulo-materias',
       {
         method: 'POST',
         body: {
@@ -479,15 +532,15 @@ const seccionesAPI = {
 
   /**
    * Agregar materia a sección
-   * POST /functions/v1/secciones-agregar-materia
+   * POST /functions/v1/modulo-materias
    */
   agregarMateria: async (seccionId, materiaId) => {
     const { data, error } = await supabase.functions.invoke(
-      'modulo-secciones',
+      'modulo-materias',
       {
         method: 'POST',
         body: {
-          action: 'asignar-materia',
+          action: 'agregar-materia-seccion',
           p_id_seccion: seccionId,
           p_id_materia: materiaId,
         },
@@ -499,16 +552,17 @@ const seccionesAPI = {
 
   /**
    * Quitar materia de sección
-   * POST /functions/v1/secciones-quitar-materia
+   * POST /functions/v1/modulo-materias
    */
   quitarMateria: async (seccionId, materiaId) => {
     const { data, error } = await supabase.functions.invoke(
-      'secciones-quitar-materia',
+      'modulo-materias',
       {
         method: 'POST',
         body: {
-          seccion_id: seccionId,
-          materia_id: materiaId,
+          action: 'quitar-materia-seccion',
+          p_id_seccion: seccionId,
+          p_id_materia: materiaId,
         },
       }
     );
@@ -517,18 +571,21 @@ const seccionesAPI = {
   },
 
   /**
-   * Clonar sección a otro año
-   * POST /functions/v1/secciones-clonar-otro-anio
+   * Clonar sección
+   * POST /functions/v1/modulo-secciones
    */
-  clonarAOtroAnio: async (seccionId, anioDestino) => {
+  clonar: async (seccionId, nombreNuevo, letraNuevo) => {
     const { data, error } = await supabase.functions.invoke(
       'modulo-secciones',
       {
         method: 'POST',
         body: {
-          action: 'clonar-seccion-otro-anio',
-          id_seccion: seccionId,
-          anio_destino: anioDestino,
+          action: 'clonar',
+          data: {
+            p_id_seccion_origen: seccionId,
+            p_nombre_nuevo: nombreNuevo,
+            p_letra_nueva: letraNuevo,
+          },
         },
       }
     );
@@ -538,7 +595,7 @@ const seccionesAPI = {
 
   /**
    * Toggle sección (activa/inactiva)
-   * POST /functions/v1/secciones-toggle
+   * POST /functions/v1/modulo-secciones
    */
   toggle: async (seccionId) => {
     const { data, error } = await supabase.functions.invoke(
@@ -546,8 +603,8 @@ const seccionesAPI = {
       {
         method: 'POST',
         body: {
-          action: 'toggle-seccion',
-          id_seccion: seccionId,
+          action: 'toggle_status',
+          data: { id_seccion: seccionId },
         },
       }
     );
@@ -563,14 +620,17 @@ const seccionesAPI = {
 const estudiantesAPI = {
   /**
    * Listar estudiantes
-   * GET /functions/v1/listar-estudiantes
+   * POST /functions/v1/modulo-estudiantes
    */
   listar: async (filters = {}) => {
     const { data, error } = await supabase.functions.invoke(
-      'listar-estudiantes',
+      'modulo-estudiantes',
       {
-        method: 'GET',
-        body: filters,
+        method: 'POST',
+        body: {
+          action: 'listar',
+          data: filters,
+        },
       }
     );
     if (error) throw error;
@@ -579,14 +639,17 @@ const estudiantesAPI = {
 
   /**
    * Inscribir estudiante
-   * POST /functions/v1/inscribir-estudiante
+   * POST /functions/v1/modulo-estudiantes
    */
   inscribir: async (estudianteData) => {
     const { data, error } = await supabase.functions.invoke(
-      'inscribir-estudiante',
+      'modulo-estudiantes',
       {
         method: 'POST',
-        body: estudianteData,
+        body: {
+          action: 'inscribir',
+          data: estudianteData,
+        },
       }
     );
     if (error) throw error;
@@ -595,16 +658,27 @@ const estudiantesAPI = {
 
   /**
    * Cambiar estudiante de sección
-   * POST /functions/v1/cambiar-seccion
    */
-  cambiarSeccion: async (estudianteId, nuevaSeccionId) => {
+  cambiarSeccion: async (id_inscripcion, nuevaSeccionId) => {
+    const { data: inscripcion, error: insError } = await supabase
+      .from('inscripciones')
+      .select('estudiante_id, anio_escolar_id')
+      .eq('id_inscripcion', id_inscripcion)
+      .single();
+
+    if (insError) throw insError;
+
     const { data, error } = await supabase.functions.invoke(
-      'cambiar-seccion',
+      'modulo-estudiantes',
       {
         method: 'POST',
         body: {
-          estudiante_id: estudianteId,
-          nueva_seccion_id: nuevaSeccionId,
+          action: 'cambiar_seccion',
+          data: {
+            estudiante_id: inscripcion.estudiante_id,
+            anio_escolar_id: inscripcion.anio_escolar_id,
+            seccion_id: nuevaSeccionId,
+          },
         },
       }
     );
@@ -614,14 +688,37 @@ const estudiantesAPI = {
 
   /**
    * Promover estudiante
-   * POST /functions/v1/promover-estudiante
    */
-  promover: async (estudianteId) => {
+  promover: async (id_inscripcion, destinoSeccionId) => {
+    const { data: inscripcion, error: insError } = await supabase
+      .from('inscripciones')
+      .select('estudiante_id, anio_escolar_id')
+      .eq('id_inscripcion', id_inscripcion)
+      .single();
+
+    if (insError) throw insError;
+
+    const { data: destino, error: destError } = await supabase
+      .from('secciones')
+      .select('anio_escolar_id')
+      .eq('id_seccion', destinoSeccionId)
+      .single();
+
+    if (destError) throw destError;
+
     const { data, error } = await supabase.functions.invoke(
-      'promover-estudiante',
+      'modulo-estudiantes',
       {
         method: 'POST',
-        body: { estudiante_id: estudianteId },
+        body: {
+          action: 'promover',
+          data: {
+            estudiante_id: inscripcion.estudiante_id,
+            anio_origen_id: inscripcion.anio_escolar_id,
+            seccion_destino_id: destinoSeccionId,
+            anio_destino_id: destino.anio_escolar_id,
+          },
+        },
       }
     );
     if (error) throw error;
@@ -630,14 +727,37 @@ const estudiantesAPI = {
 
   /**
    * Repetir grado (estudiante)
-   * POST /functions/v1/repetir-grado
    */
-  repetir: async (estudianteId) => {
+  repetir: async (id_inscripcion, destinoSeccionId) => {
+    const { data: inscripcion, error: insError } = await supabase
+      .from('inscripciones')
+      .select('estudiante_id, anio_escolar_id')
+      .eq('id_inscripcion', id_inscripcion)
+      .single();
+
+    if (insError) throw insError;
+
+    const { data: destino, error: destError } = await supabase
+      .from('secciones')
+      .select('anio_escolar_id')
+      .eq('id_seccion', destinoSeccionId)
+      .single();
+
+    if (destError) throw destError;
+
     const { data, error } = await supabase.functions.invoke(
-      'repetir-grado',
+      'modulo-estudiantes',
       {
         method: 'POST',
-        body: { estudiante_id: estudianteId },
+        body: {
+          action: 'repetir',
+          data: {
+            estudiante_id: inscripcion.estudiante_id,
+            anio_origen_id: inscripcion.anio_escolar_id,
+            seccion_destino_id: destinoSeccionId,
+            anio_destino_id: destino.anio_escolar_id,
+          },
+        },
       }
     );
     if (error) throw error;
@@ -646,14 +766,16 @@ const estudiantesAPI = {
 
   /**
    * Retirar estudiante
-   * POST /functions/v1/retirar-estudiante
    */
-  retirar: async (estudianteId) => {
+  retirar: async (id_inscripcion) => {
     const { data, error } = await supabase.functions.invoke(
-      'retirar-estudiante',
+      'modulo-estudiantes',
       {
         method: 'POST',
-        body: { estudiante_id: estudianteId },
+        body: {
+          action: 'retirar',
+          data: { id_inscripcion },
+        },
       }
     );
     if (error) throw error;
@@ -738,28 +860,27 @@ const evaluacionesAPI = {
   },
 
   crear: async (payload) => {
+    const input = payload || {};
+    const evaluations = Array.isArray(input?.data?.evaluaciones)
+      ? input.data.evaluaciones.map(({ action: _action, ...item }) => item)
+      : [{ ...input }];
+
+    const requestBody = {
+      action: 'configurar-planilla',
+      data: {
+        evaluaciones,
+        docente_id: input.docente_id,
+        seccion_id: input.seccion_id,
+        materia_id: input.materia_id,
+        lapso_id: input.lapso_id,
+      },
+    };
+
     const { data, error } = await supabase.functions.invoke(
       'modulo-notas',
       {
         method: 'POST',
-        body: {
-          action: 'configurar-planilla',
-          data: {
-            docente_id: payload.docente_id,
-            seccion_id: payload.seccion_id,
-            materia_id: payload.materia_id,
-            lapso_id: payload.lapso_id,
-            evaluaciones: [{
-              nombre: payload.nombre,
-              porcentaje: payload.porcentaje,
-              fecha: payload.fecha,
-              tecnica: payload.tecnica,
-              instrumento: payload.instrumento,
-              valor_maximo: payload.valor_maximo,
-              descripcion: payload.descripcion,
-            }],
-          },
-        },
+        body: requestBody,
       }
     );
     if (error) throw error;
